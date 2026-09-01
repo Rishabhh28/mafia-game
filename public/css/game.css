@@ -1,0 +1,173 @@
+.game-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.game-header .phase-title {
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  text-align: center;
+  flex: 1;
+}
+
+.game-header .meta {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--text-secondary);
+}
+
+.game-main {
+  flex: 1;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.announce {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 1.5rem;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+}
+
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+  width: min(960px, 100%);
+}
+
+.target-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  max-width: 720px;
+}
+
+.target-chip {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 0.85rem 1.2rem;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.target-chip:hover, .target-chip.selected {
+  border-color: var(--red-400);
+  box-shadow: var(--shadow-glow-red);
+}
+
+.waiting-copy {
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-top: 3rem;
+  font-size: 1.3rem;
+}
+
+.night-layout {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.night-center { text-align: center; flex: 1; min-width: 260px; }
+
+.controls-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1.25rem;
+}
+
+.fallen {
+  margin-top: 2rem;
+  width: min(960px, 100%);
+}
+
+.fallen h3 {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.gameover {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.gameover.mafia-win { background: rgba(80, 0, 0, 0.92); }
+.gameover.innocent-win { background: rgba(40, 32, 12, 0.92); }
+
+.gameover h2 {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  margin-bottom: 1rem;
+  color: var(--gold);
+}
+
+.scoreboard {
+  list-style: none;
+  width: min(420px, 100%);
+  margin: 1.5rem 0;
+}
+
+.scoreboard li {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 0;
+}
+
+.spectator-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  text-align: center;
+  padding: 0.5rem;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  z-index: 30;
+}
+
+#timer-readout {
+  font-variant-numeric: tabular-nums;
+  color: var(--red-300);
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.08em;
+}

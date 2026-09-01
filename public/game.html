@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Game — Mafia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/base.css"/>
+  <link rel="stylesheet" href="/css/components.css"/>
+  <link rel="stylesheet" href="/css/game.css"/>
+</head>
+<body>
+  <div class="vignette"></div>
+  <div class="game-shell" id="game-shell">
+    <header class="game-header">
+      <div class="meta" id="code-meta">ROOM</div>
+      <h2 class="phase-title" id="phase-title">The city waits</h2>
+      <div class="meta" id="timer-readout"></div>
+    </header>
+    <div class="timer-bar-wrap"><div class="timer-bar" id="timer-bar"></div></div>
+    <main class="game-main">
+      <p class="announce" id="announce"></p>
+
+      <section id="reveal-stage" class="hidden">
+        <div class="card-scene" id="role-card">
+          <div class="card">
+            <div class="card-face card-back">
+              <div class="card-ornament">✦</div>
+              <div class="card-back-title">MAFIA</div>
+              <div class="card-ornament">✦</div>
+            </div>
+            <div class="card-face card-front" id="card-front"></div>
+          </div>
+        </div>
+        <p class="announce" id="reveal-name" style="margin-top:1.25rem"></p>
+      </section>
+
+      <section id="night-stage" class="night-layout hidden">
+        <aside class="faction-chat hidden" id="faction-chat">
+          <div class="faction-label">Channel</div>
+          <div class="faction-messages" id="faction-messages"></div>
+          <div class="faction-input-row">
+            <input id="faction-input" type="text" maxlength="280" placeholder="Type here..."/>
+            <button type="button" id="faction-send">Send</button>
+          </div>
+        </aside>
+        <div class="night-center">
+          <p class="waiting-copy hidden" id="night-wait">Night has fallen. Keep your eyes closed.</p>
+          <h3 class="phase-title" id="night-action-title"></h3>
+          <div class="target-grid" id="target-grid"></div>
+          <div class="controls-row">
+            <button class="btn btn-primary hidden" id="lock-btn" type="button">Lock in</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="day-stage" class="hidden">
+        <div class="player-grid" id="player-grid"></div>
+        <div class="controls-row">
+          <button class="btn btn-ghost" id="mute-btn" type="button">Mute</button>
+          <button class="btn btn-ghost hidden" id="skip-btn" type="button">Skip to vote</button>
+        </div>
+        <div class="fallen hidden" id="fallen">
+          <h3>The fallen</h3>
+          <div class="player-grid" id="fallen-grid"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="spectator-banner hidden" id="spectator">You are among the fallen — watch, but do not speak.</div>
+  <p class="error-banner" id="error" style="position:fixed;bottom:2.5rem;left:0;right:0;z-index:31"></p>
+
+  <div class="gameover hidden" id="gameover">
+    <h2 id="gameover-title"></h2>
+    <p id="gameover-sub"></p>
+    <ul class="scoreboard" id="scoreboard"></ul>
+    <button class="btn btn-primary hidden" id="again-btn" type="button">Play again</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="/js/game-state.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/card-flip.js"></script>
+  <script src="/js/faction-chat.js"></script>
+  <script src="/js/audio.js"></script>
+  <script src="/js/socket-client.js"></script>
+  <script>
+    loadSession();
+    if (!GameState.name || !GameState.code) location.href = '/';
+
+    const socket = connectSocket();
+    attachCommonErrors(socket);
+    bindFactionChat(socket);
+
+    let muted = false;
+    let myVote = null;
+    let pendingAction = null;
+
+    document.getElementById('code-meta').textContent = GameState.code;
+
+    function setMood(night) {
+      document.body.classList.toggle('night-mood', night);
+      document.querySelector('.page') && document.querySelector('.page').classList.toggle('night-mood', night);
+      document.getElementById('game-shell').classList.toggle('night-mood', night);
+      document.body.classList.toggle('night-mood', night);
+    }
+
+    function showStage(name) {
+      ['reveal-stage', 'night-stage', 'day-stage'].forEach((id) => {
+        document.getElementById(id).classList.toggle('hidden', id !== name);
+      });
+    }
+
+    function updateSpectator() {
+      document.getElementById('spectator').classList.toggle('hidden', GameState.isAlive);
+    }
+
+    function livingAndDead() {
+      const living = GameState.players.filter((p) => p.isAlive);
+      const dead = GameState.players.filter((p) => !p.isAlive);
+      return { living, dead };
+    }
+
+    socket.on('connect', () => joinRoom(socket));
+
+    socket.on('room:joined', (payload) => {
+      GameState.playerId = payload.playerId;
+      GameState.code = payload.code;
+      GameState.role = payload.role || GameState.role;
+      GameState.factionMembers = payload.factionMembers || GameState.factionMembers;
+      GameState.isAlive = payload.isAlive !== false;
+      GameState.round = payload.round || 0;
+      applyPlayers(payload.players);
+      saveSession();
+      updateSpectator();
+      if (payload.phase === 'lobby') location.href = '/lobby.html?code=' + encodeURIComponent(payload.code);
+      if (payload.phase === 'role-reveal' && GameState.role) {
+        showStage('reveal-stage');
+        setText('phase-title', 'Your fate');
+        revealRoleCard(GameState.role, GameState.factionMembers);
+      }
+    });
+
+    socket.on('role:assigned', ({ role, factionMembers }) => {
+      GameState.role = role;
+      GameState.factionMembers = factionMembers || [];
+      showStage('reveal-stage');
+      setText('phase-title', 'Your fate');
+      setText('announce', '');
+      document.getElementById('gameover').classList.add('hidden');
+      revealRoleCard(role, GameState.factionMembers);
+    });
+
+    socket.on('phase:night', ({ round, players }) => {
+      GameState.round = round;
+      GameState.phase = 'night';
+      applyPlayers(players);
+      myVote = null;
+      clearFactionChat();
+      hideFactionChat();
+      setMood(true);
+      showStage('night-stage');
+      setText('phase-title', 'The city sleeps');
+      document.getElementById('phase-title').classList.add('ellipsis');
+      setText('announce', 'Round ' + round);
+      updateSpectator();
+    });
+
+    socket.on('phase:mafia-active', ({ timeLimit, targets }) => {
+      GameState.phase = 'night-mafia';
+      GameState.nightTargets = targets || [];
+      startTimerBar(timeLimit);
+      const isMafia = GameState.role === 'mafia' && GameState.isAlive;
+      document.getElementById('night-wait').classList.toggle('hidden', isMafia);
+      document.getElementById('night-action-title').textContent = isMafia ? 'Choose your target' : '';
+      document.getElementById('lock-btn').classList.toggle('hidden', !isMafia);
+      document.getElementById('lock-btn').textContent = 'Lock in kill';
+      pendingAction = 'kill';
+      renderTargets(document.getElementById('target-grid'), isMafia ? targets : [], null);
+      if (isMafia && GameState.factionMembers.length >= 1) initFactionChat('mafia');
+      else if (!isMafia) hideFactionChat();
+    });
+
+    socket.on('phase:doctor-active', ({ timeLimit, targets }) => {
+      GameState.phase = 'night-doctor';
+      GameState.nightTargets = targets || [];
+      myVote = null;
+      startTimerBar(timeLimit);
+      const isDoc = GameState.role === 'doctor' && GameState.isAlive;
+      document.getElementById('night-wait').classList.toggle('hidden', isDoc);
+      document.getElementById('night-wait').textContent = 'Night has fallen. Keep your eyes closed.';
+      document.getElementById('night-action-title').textContent = isDoc ? 'Who do you protect tonight?' : '';
+      document.getElementById('lock-btn').classList.toggle('hidden', !isDoc);
+      document.getElementById('lock-btn').textContent = 'Lock in save';
+      pendingAction = 'heal';
+      renderTargets(document.getElementById('target-grid'), isDoc ? targets : [], null);
+      hideFactionChat();
+      if (isDoc && GameState.factionMembers.length >= 1) initFactionChat('doctor');
+    });
+
+    socket.on('phase:day', ({ announcement, killedPlayer, timeLimit, players, peerIds }) => {
+      GameState.phase = 'day-discuss';
+      applyPlayers(players);
+      GameState.peerIds = peerIds || [];
+      GameState.announcement = announcement;
+      myVote = null;
+      hideFactionChat();
+      setMood(false);
+      showStage('day-stage');
+      document.getElementById('phase-title').classList.remove('ellipsis');
+      setText('phase-title', 'Day discussion');
+      setText('announce', announcement || '');
+      startTimerBar(timeLimit);
+      const { living, dead } = livingAndDead();
+      const tmp = GameState.players;
+      GameState.players = living;
+      renderPlayerGrid(document.getElementById('player-grid'), { showVote: false });
+      GameState.players = tmp;
+      const fallen = document.getElementById('fallen');
+      fallen.classList.toggle('hidden', !dead.length);
+      if (dead.length) {
+        GameState.players = dead;
+        renderPlayerGrid(document.getElementById('fallen-grid'), { showVote: false });
+        GameState.players = tmp;
+      }
+      document.getElementById('skip-btn').classList.toggle('hidden', !GameState.isHost);
+      updateSpectator();
+      initAudio(GameState.uuid).then(() => {
+        setAudioPhase(true);
+        connectToAllPeers(peerIds);
+      });
+    });
+
+    socket.on('phase:vote', ({ timeLimit, players }) => {
+      GameState.phase = 'day-vote';
+      applyPlayers(players);
+      myVote = null;
+      setText('phase-title', 'Cast your vote');
+      startTimerBar(timeLimit);
+      const { living, dead } = livingAndDead();
+      const tmp = GameState.players;
+      GameState.players = living;
+      renderPlayerGrid(document.getElementById('player-grid'), { showVote: true, votes: {}, myVote: null });
+      GameState.players = tmp;
+      document.getElementById('skip-btn').classList.add('hidden');
+      bindVoteButtons();
+    });
+
+    socket.on('vote:update', ({ kind, votes }) => {
+      GameState.votes = votes || {};
+      if (kind === 'day' && GameState.phase === 'day-vote') {
+        const tmp = GameState.players;
+        GameState.players = tmp.filter((p) => p.isAlive);
+        renderPlayerGrid(document.getElementById('player-grid'), {
+          showVote: true,
+          votes: GameState.votes,
+          myVote,
+        });
+        GameState.players = tmp;
+        bindVoteButtons();
+      }
+    });
+
+    socket.on('vote:result', ({ eliminated, wasRole, players, announcement }) => {
+      applyPlayers(players);
+      setAudioPhase(false);
+      setText('announce', announcement || '');
+      showStage('reveal-stage');
+      setText('phase-title', 'The accused');
+      if (eliminated && wasRole) {
+        revealEliminatedCard(wasRole, eliminated.name);
+      } else {
+        document.getElementById('reveal-stage').classList.add('hidden');
+      }
+    });
+
+    socket.on('faction:message', (msg) => appendFactionMessage(msg));
+
+    socket.on('audio:mute', () => setAudioPhase(false));
+    socket.on('audio:unmute', () => {
+      initAudio(GameState.uuid).then(() => {
+        setAudioPhase(true);
+        connectToAllPeers(GameState.peerIds);
+      });
+    });
+
+    socket.on('host:changed', ({ hostId }) => {
+      GameState.isHost = hostId === GameState.playerId;
+      document.getElementById('skip-btn').classList.toggle(
+        'hidden',
+        !(GameState.isHost && GameState.phase === 'day-discuss')
+      );
+      document.getElementById('again-btn').classList.toggle(
+        'hidden',
+        !(GameState.isHost && GameState.phase === 'gameover')
+      );
+    });
+
+    socket.on('player:left', ({ players }) => applyPlayers(players));
+    socket.on('player:joined', ({ players }) => applyPlayers(players));
+    socket.on('score:update', ({ scores }) => { GameState.scores = scores; });
+
+    socket.on('game:over', ({ winner, scores, mafiaList }) => {
+      GameState.phase = 'gameover';
+      GameState.scores = scores;
+      setAudioPhase(false);
+      const overlay = document.getElementById('gameover');
+      overlay.classList.remove('hidden');
+      overlay.classList.toggle('mafia-win', winner === 'mafia');
+      overlay.classList.toggle('innocent-win', winner === 'innocents');
+      setText('gameover-title', winner === 'mafia' ? 'The mafia owns the city' : 'The innocent prevail');
+      const names = (mafiaList || []).map((m) => m.name).join(', ');
+      setText('gameover-sub', 'Mafia: ' + names);
+      const board = document.getElementById('scoreboard');
+      const rows = Object.values(scores || {}).sort((a, b) => b.score - a.score);
+      board.innerHTML = rows.map((r) =>
+        `<li><span>${escapeHtml(r.name)} <em style="color:var(--text-muted);font-size:14px">(${escapeHtml(r.role || '')})</em></span><span style="color:var(--gold)">${r.score}</span></li>`
+      ).join('');
+      document.getElementById('again-btn').classList.toggle('hidden', !GameState.isHost);
+    });
+
+    socket.on('room:reset', ({ code }) => {
+      location.href = '/lobby.html?code=' + encodeURIComponent(code);
+    });
+
+    document.getElementById('target-grid').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-target]');
+      if (!btn || !GameState.isAlive) return;
+      myVote = btn.getAttribute('data-target');
+      renderTargets(document.getElementById('target-grid'), GameState.nightTargets, myVote);
+    });
+
+    document.getElementById('lock-btn').addEventListener('click', () => {
+      if (!myVote || !GameState.isAlive) return;
+      if (pendingAction === 'kill') socket.emit('mafia:kill', { targetId: myVote });
+      if (pendingAction === 'heal') socket.emit('doctor:heal', { targetId: myVote });
+    });
+
+    function bindVoteButtons() {
+      document.querySelectorAll('.vote-btn').forEach((btn) => {
+        btn.onclick = () => {
+          if (!GameState.isAlive) return;
+          myVote = btn.getAttribute('data-target');
+          socket.emit('vote:cast', { targetId: myVote });
+        };
+      });
+    }
+
+    document.getElementById('skip-btn').addEventListener('click', () => {
+      socket.emit('discussion:skip');
+    });
+    document.getElementById('again-btn').addEventListener('click', () => {
+      socket.emit('game:playagain');
+    });
+    document.getElementById('mute-btn').addEventListener('click', () => {
+      muted = !muted;
+      toggleMute(muted);
+      document.getElementById('mute-btn').textContent = muted ? 'Unmute' : 'Mute';
+    });
+  </script>
+</body>
+</html>

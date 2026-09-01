@@ -1,0 +1,358 @@
+.btn {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid var(--border-red);
+  background: transparent;
+  color: var(--text-primary);
+  padding: 0.75rem 2rem;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--red-800);
+  box-shadow: var(--shadow-glow-red);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--red-600);
+  border-color: var(--red-400);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--red-500);
+}
+
+.btn-ghost {
+  border-color: var(--border-strong);
+  padding: 0.5rem 1rem;
+  font-size: 12px;
+}
+
+input[type="text"] {
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  font-family: 'Crimson Pro', serif;
+  font-size: 18px;
+  padding: 0.7rem 1rem;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input[type="text"]:focus { border-color: var(--red-400); }
+
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  padding: 2rem;
+  width: min(420px, 100%);
+}
+
+.panel h2 {
+  font-size: 14px;
+  color: var(--gold);
+  margin-bottom: 1.25rem;
+}
+
+.field { margin-bottom: 1rem; }
+
+.field label {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+  font-family: 'Cinzel', serif;
+}
+
+.stack { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.or-split {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0.5rem 0;
+}
+
+.room-code {
+  font-size: 2rem;
+  letter-spacing: 0.28em;
+  color: var(--gold);
+  text-align: center;
+  margin: 0.5rem 0 1.25rem;
+}
+
+.player-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(480px, 100%);
+  margin-bottom: 1.5rem;
+}
+
+.player-list li {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 0.7rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.player-list .tag {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.player-list .offline { color: var(--text-muted); }
+
+.card-scene {
+  width: 220px;
+  height: 340px;
+  perspective: 800px;
+  margin: 0 auto;
+}
+
+.card {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.85s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.card.flipped { transform: rotateY(180deg); }
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  border: 1px solid var(--border-strong);
+}
+
+.card-back {
+  background: var(--bg-elevated);
+  background-image:
+    repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(139, 0, 0, 0.06) 10px, rgba(139, 0, 0, 0.06) 11px),
+    repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(139, 0, 0, 0.06) 10px, rgba(139, 0, 0, 0.06) 11px);
+  border-color: var(--border-red);
+  box-shadow: var(--shadow-glow-red);
+}
+
+.card-back-title {
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: var(--red-400);
+}
+
+.card-ornament { color: var(--red-600); font-size: 20px; }
+
+.card-front { transform: rotateY(180deg); }
+.card-front.role-mafia { background: linear-gradient(160deg, #1A0000, var(--red-900)); border-color: var(--red-500); }
+.card-front.role-doctor { background: linear-gradient(160deg, #001A1A, #004040); border-color: #008080; }
+.card-front.role-innocent { background: linear-gradient(160deg, #111118, #1E1E28); border-color: var(--border-strong); }
+
+.card-role-icon { font-size: 48px; margin-bottom: 0.5rem; }
+.card-role-name {
+  font-family: 'Cinzel', serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+.card-role-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 0 1rem;
+}
+.card-faction {
+  font-size: 13px;
+  color: var(--gold);
+  text-align: center;
+  padding: 0 1rem;
+}
+
+.faction-chat {
+  position: fixed;
+  left: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 280px;
+  height: 420px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-red);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-glow-red);
+  z-index: 20;
+}
+
+.faction-chat.doctor {
+  border-color: rgba(0, 92, 92, 0.6);
+  box-shadow: 0 0 30px rgba(0, 92, 92, 0.3);
+}
+
+.faction-label {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  color: var(--red-300);
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+}
+
+.faction-chat.doctor .faction-label { color: #7ad4d4; }
+
+.faction-messages { flex: 1; overflow-y: auto; padding: 0.75rem; }
+
+.chat-msg { margin-bottom: 0.5rem; font-size: 15px; }
+.chat-name { color: var(--red-300); font-weight: 600; margin-right: 0.4rem; }
+.faction-chat.doctor .chat-name { color: #7ad4d4; }
+.chat-text { color: var(--text-primary); }
+
+.faction-input-row { display: flex; border-top: 1px solid var(--border); }
+.faction-input-row input {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0.6rem;
+  color: var(--text-primary);
+  font-family: 'Crimson Pro', serif;
+}
+.faction-input-row button {
+  padding: 0.6rem 1rem;
+  background: var(--red-700);
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.player-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  text-align: center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.player-card:hover { border-color: var(--red-500); box-shadow: 0 0 16px rgba(139, 0, 0, 0.2); }
+.player-card.voted-by-me { border-color: var(--red-400); box-shadow: var(--shadow-glow-red); }
+.player-card.dead { opacity: 0.35; filter: grayscale(0.8); pointer-events: none; }
+.player-card.teammate { border-color: var(--gold-dim); }
+.player-card.self { outline: 1px solid var(--border-strong); }
+
+.player-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--red-900);
+  font-family: 'Cinzel', serif;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.75rem;
+  border: 2px solid var(--border-strong);
+}
+
+.speaking-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  margin: 0 auto 0.5rem;
+  transition: background 0.15s;
+}
+
+.speaking-indicator.active {
+  background: #00C853;
+  box-shadow: 0 0 6px #00C853;
+}
+
+.vote-dot-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  min-height: 10px;
+  margin: 0.4rem 0;
+}
+
+.vote-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red-400);
+}
+
+.timer-bar-wrap {
+  width: min(640px, 90%);
+  height: 4px;
+  background: var(--bg-elevated);
+  margin: 0 auto 1.25rem;
+  overflow: hidden;
+}
+
+.timer-bar {
+  height: 100%;
+  background: var(--red-500);
+  width: 100%;
+  transform-origin: left center;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  padding: 1rem;
+}
+
+.modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-red);
+  padding: 2rem;
+  width: min(480px, 100%);
+  text-align: center;
+  box-shadow: var(--shadow-glow-red);
+}
+
+@media (max-width: 640px) {
+  .faction-chat {
+    position: static;
+    transform: none;
+    width: 100%;
+    height: 240px;
+    margin: 0 0 1rem;
+  }
+}

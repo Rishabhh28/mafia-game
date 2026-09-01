@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mafia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/base.css"/>
+  <link rel="stylesheet" href="/css/components.css"/>
+</head>
+<body>
+  <div class="vignette"></div>
+  <main class="page">
+    <div class="brand">
+      <h1>Mafia</h1>
+      <p>Trust no one. Survive the night.</p>
+    </div>
+    <form class="panel" id="entry-form">
+      <h2>Enter the city</h2>
+      <div class="field">
+        <label for="player-name">Your name</label>
+        <input type="text" id="player-name" maxlength="16" autocomplete="nickname" required/>
+      </div>
+      <div class="stack">
+        <button type="submit" class="btn btn-primary" id="create-btn">Create Room</button>
+        <div class="or-split">or join with a code</div>
+        <div class="field">
+          <label for="room-code">Room code</label>
+          <input type="text" id="room-code" maxlength="6" autocapitalize="characters" spellcheck="false"/>
+        </div>
+        <button type="button" class="btn" id="join-btn">Join Room</button>
+      </div>
+      <p class="error-banner" id="error"></p>
+    </form>
+  </main>
+  <script src="/js/game-state.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    loadSession();
+    const params = new URLSearchParams(location.search);
+    const preset = (params.get('code') || '').toUpperCase();
+    if (preset) document.getElementById('room-code').value = preset;
+    if (GameState.name) document.getElementById('player-name').value = GameState.name;
+
+    function goLobby(create) {
+      const name = document.getElementById('player-name').value.trim();
+      if (!name) {
+        document.getElementById('error').textContent = 'Enter your name.';
+        return;
+      }
+      GameState.uuid = getOrCreateUuid();
+      GameState.name = name;
+      const code = document.getElementById('room-code').value.trim().toUpperCase();
+      if (!create && !code) {
+        document.getElementById('error').textContent = 'Enter a room code.';
+        return;
+      }
+      GameState.code = create ? '' : code;
+      saveSession();
+      const q = create ? 'create=1' : ('code=' + encodeURIComponent(code));
+      location.href = '/lobby.html?' + q;
+    }
+
+    document.getElementById('entry-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      goLobby(true);
+    });
+    document.getElementById('join-btn').addEventListener('click', () => goLobby(false));
+  </script>
+</body>
+</html>
