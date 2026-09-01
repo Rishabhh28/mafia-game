@@ -212,9 +212,25 @@ function checkWin(room) {
   return null;
 }
 
+function reviveAll(room) {
+  room.players.forEach((p) => {
+    p.isAlive = true;
+    p.revealedRole = null;
+  });
+}
+
+function teamTotals(room) {
+  let mafia = 0;
+  let town = 0;
+  room.players.forEach((p) => {
+    if (p.role === 'mafia') mafia += p.score;
+    else town += p.score;
+  });
+  return { mafia, town };
+}
+
 function applyEndgameScores(room, winner) {
   room.players.forEach((p) => {
-    if (!p.isAlive) return;
     if (p.role === 'mafia') p.score += 10;
     else p.score += 5;
   });
@@ -222,13 +238,18 @@ function applyEndgameScores(room, winner) {
     room.players.filter((p) => p.role === 'mafia').forEach((p) => {
       p.score += 20;
     });
-  } else {
-    living(room)
-      .filter((p) => p.role !== 'mafia')
-      .forEach((p) => {
-        p.score += 15;
-      });
+  } else if (winner === 'innocents') {
+    room.players.filter((p) => p.role !== 'mafia').forEach((p) => {
+      p.score += 15;
+    });
   }
+}
+
+function decideWinnerByScore(room) {
+  const { mafia, town } = teamTotals(room);
+  if (mafia > town) return 'mafia';
+  if (town > mafia) return 'innocents';
+  return 'draw';
 }
 
 function endGame(room, winner) {
@@ -247,13 +268,10 @@ function endGame(room, winner) {
   });
 }
 
-function maybeEnd(room) {
-  const winner = checkWin(room);
-  if (winner) {
-    endGame(room, winner);
-    return true;
-  }
-  return false;
+function finishGame(room) {
+  reviveAll(room);
+  const winner = decideWinnerByScore(room);
+  endGame(room, winner);
 }
 
 function pickNewHost(room) {
@@ -276,13 +294,10 @@ function removePlayer(room, uuid) {
     return;
   }
   if (wasHost) pickNewHost(room);
-  if (room.phase !== 'lobby' && room.phase !== 'gameover') {
-    maybeEnd(room);
-  }
 }
 
 function startNight(room) {
-  if (maybeEnd(room)) return;
+  reviveAll(room);
   room.round += 1;
   room.phase = 'night-mafia';
   room.nightActions = emptyNightActions();
@@ -368,7 +383,7 @@ function resolveNight(room) {
       livingByRole(room, 'mafia').forEach((p) => {
         p.score += 5;
       });
-      announcement = `The city wakes — ${victim.name} was found dead.`;
+      announcement = `The city wakes — ${victim.name} was taken this night. They return next round.`;
     } else {
       announcement = 'The city wakes — no one was taken in the night.';
     }
@@ -377,8 +392,6 @@ function resolveNight(room) {
   }
 
   emitRoom(room, 'score:update', { scores: scoresMap(room) });
-
-  if (maybeEnd(room)) return;
   startDay(room, announcement, killedPlayer);
 }
 
@@ -419,7 +432,6 @@ function resolveDayVote(room) {
     const player = findPlayer(room, eliminatedId);
     if (player && player.isAlive) {
       player.isAlive = false;
-      player.revealedRole = player.role;
       wasRole = player.role;
       eliminated = { id: player.uuid, name: player.name };
       if (player.role === 'mafia') {
@@ -435,21 +447,30 @@ function resolveDayVote(room) {
 
   emitRoom(room, 'vote:result', {
     eliminated,
-    wasRole,
+    wasRole: null,
     players: publicPlayers(room),
     announcement: eliminated
-      ? wasRole === 'mafia'
-        ? `Justice served — ${eliminated.name} was Mafia.`
-        : `${eliminated.name} was innocent. The mafia remains hidden.`
-      : 'The vote was tied. No one is eliminated.',
+      ? `${eliminated.name} is out this round. They return if the host continues.`
+      : 'The vote was tied. No one is out this round.',
   });
   emitRoom(room, 'score:update', { scores: scoresMap(room) });
 
   setTimeout(() => {
     if (!rooms[room.code] || room.phase === 'gameover') return;
-    if (maybeEnd(room)) return;
-    startNight(room);
-  }, 8000);
+    enterRoundBreak(room);
+  }, 5000);
+}
+
+function enterRoundBreak(room) {
+  if (room.phase === 'gameover') return;
+  room.phase = 'round-break';
+  clearTimers(room);
+  emitRoom(room, 'audio:mute', {});
+  emitRoom(room, 'phase:round-break', {
+    round: room.round,
+    players: publicPlayers(room),
+    scores: scoresMap(room),
+  });
 }
 
 function syncPhaseToPlayer(player, room) {
@@ -497,6 +518,12 @@ function syncPhaseToPlayer(player, room) {
       players: publicPlayers(room),
     });
     emitToPlayer(player, 'vote:update', { kind: 'day', votes: room.dayVotes });
+  } else if (room.phase === 'round-break') {
+    emitToPlayer(player, 'phase:round-break', {
+      round: room.round,
+      players: publicPlayers(room),
+      scores: scoresMap(room),
+    });
   } else if (room.phase === 'gameover') {
     emitToPlayer(player, 'game:over', {
       winner: room.winner || 'innocents',
@@ -731,6 +758,22 @@ io.on('connection', (socket) => {
     const player = playerBySocket(room, socket);
     if (!player || player.uuid !== room.hostUuid) return;
     startVote(room);
+  });
+
+  socket.on('game:nextround', () => {
+    const room = getRoomBySocket(socket);
+    if (!room || room.phase !== 'round-break') return;
+    const player = playerBySocket(room, socket);
+    if (!player || player.uuid !== room.hostUuid) return;
+    startNight(room);
+  });
+
+  socket.on('game:finish', () => {
+    const room = getRoomBySocket(socket);
+    if (!room || room.phase !== 'round-break') return;
+    const player = playerBySocket(room, socket);
+    if (!player || player.uuid !== room.hostUuid) return;
+    finishGame(room);
   });
 
   socket.on('game:playagain', () => {

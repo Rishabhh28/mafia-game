@@ -66,10 +66,18 @@
           <div class="player-grid" id="fallen-grid"></div>
         </div>
       </section>
+
+      <section id="round-break-stage" class="hidden" style="text-align:center;max-width:520px">
+        <p class="waiting-copy" id="round-break-copy">Waiting for the host to continue or end the game.</p>
+        <div class="controls-row hidden" id="host-round-controls">
+          <button class="btn btn-primary" id="next-round-btn" type="button">Next round</button>
+          <button class="btn" id="finish-btn" type="button">Finish game</button>
+        </div>
+      </section>
     </main>
   </div>
 
-  <div class="spectator-banner hidden" id="spectator">You are among the fallen — watch, but do not speak.</div>
+  <div class="spectator-banner hidden" id="spectator">Out this round — you return when the host starts the next round.</div>
   <p class="error-banner" id="error" style="position:fixed;bottom:2.5rem;left:0;right:0;z-index:31"></p>
 
   <div class="gameover hidden" id="gameover">
@@ -109,7 +117,7 @@
     }
 
     function showStage(name) {
-      ['reveal-stage', 'night-stage', 'day-stage'].forEach((id) => {
+      ['reveal-stage', 'night-stage', 'day-stage', 'round-break-stage'].forEach((id) => {
         document.getElementById(id).classList.toggle('hidden', id !== name);
       });
     }
@@ -147,6 +155,7 @@
     socket.on('role:assigned', ({ role, factionMembers }) => {
       GameState.role = role;
       GameState.factionMembers = factionMembers || [];
+      document.getElementById('role-card').classList.remove('hidden');
       showStage('reveal-stage');
       setText('phase-title', 'Your fate');
       setText('announce', '');
@@ -158,6 +167,7 @@
       GameState.round = round;
       GameState.phase = 'night';
       applyPlayers(players);
+      document.getElementById('gameover').classList.add('hidden');
       myVote = null;
       clearFactionChat();
       hideFactionChat();
@@ -264,17 +274,34 @@
       }
     });
 
-    socket.on('vote:result', ({ eliminated, wasRole, players, announcement }) => {
+    socket.on('vote:result', ({ eliminated, players, announcement }) => {
       applyPlayers(players);
       setAudioPhase(false);
       setText('announce', announcement || '');
       showStage('reveal-stage');
-      setText('phase-title', 'The accused');
-      if (eliminated && wasRole) {
-        revealEliminatedCard(wasRole, eliminated.name);
-      } else {
-        document.getElementById('reveal-stage').classList.add('hidden');
-      }
+      setText('phase-title', 'This round');
+      document.getElementById('role-card').classList.add('hidden');
+      const nameEl = document.getElementById('reveal-name');
+      if (nameEl) nameEl.textContent = eliminated ? eliminated.name + ' is out this round' : 'No one is out this round';
+    });
+
+    socket.on('phase:round-break', ({ round, players, scores }) => {
+      GameState.phase = 'round-break';
+      GameState.round = round;
+      GameState.scores = scores || {};
+      applyPlayers(players);
+      hideFactionChat();
+      setMood(false);
+      startTimerBar(0);
+      showStage('round-break-stage');
+      setText('phase-title', 'Round ' + round + ' complete');
+      setText('announce', 'Kills this round only change the score. Everyone can return.');
+      document.getElementById('host-round-controls').classList.toggle('hidden', !GameState.isHost);
+      document.getElementById('round-break-copy').textContent = GameState.isHost
+        ? 'Continue with everyone back in, or finish and show the scoreboard.'
+        : 'Waiting for the host to continue or end the game.';
+      updateSpectator();
+      document.getElementById('spectator').classList.add('hidden');
     });
 
     socket.on('faction:message', (msg) => appendFactionMessage(msg));
@@ -293,6 +320,10 @@
         'hidden',
         !(GameState.isHost && GameState.phase === 'day-discuss')
       );
+      const hostRound = document.getElementById('host-round-controls');
+      if (hostRound) {
+        hostRound.classList.toggle('hidden', !(GameState.isHost && GameState.phase === 'round-break'));
+      }
       document.getElementById('again-btn').classList.toggle(
         'hidden',
         !(GameState.isHost && GameState.phase === 'gameover')
@@ -310,8 +341,13 @@
       const overlay = document.getElementById('gameover');
       overlay.classList.remove('hidden');
       overlay.classList.toggle('mafia-win', winner === 'mafia');
-      overlay.classList.toggle('innocent-win', winner === 'innocents');
-      setText('gameover-title', winner === 'mafia' ? 'The mafia owns the city' : 'The innocent prevail');
+      overlay.classList.toggle('innocent-win', winner !== 'mafia');
+      const titles = {
+        mafia: 'The mafia owns the city',
+        innocents: 'The innocent prevail',
+        draw: 'The city is divided',
+      };
+      setText('gameover-title', titles[winner] || 'The game ends');
       const names = (mafiaList || []).map((m) => m.name).join(', ');
       setText('gameover-sub', 'Mafia: ' + names);
       const board = document.getElementById('scoreboard');
@@ -351,6 +387,12 @@
 
     document.getElementById('skip-btn').addEventListener('click', () => {
       socket.emit('discussion:skip');
+    });
+    document.getElementById('next-round-btn').addEventListener('click', () => {
+      socket.emit('game:nextround');
+    });
+    document.getElementById('finish-btn').addEventListener('click', () => {
+      socket.emit('game:finish');
     });
     document.getElementById('again-btn').addEventListener('click', () => {
       socket.emit('game:playagain');
