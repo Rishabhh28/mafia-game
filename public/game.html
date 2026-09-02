@@ -14,7 +14,10 @@
   <div class="vignette"></div>
   <div class="game-shell" id="game-shell">
     <header class="game-header">
-      <div class="meta" id="code-meta">ROOM</div>
+      <div class="meta" style="display:flex;align-items:center;gap:0.75rem;">
+        <span id="code-meta">ROOM</span>
+        <button type="button" class="rules-btn rules-btn-header" onclick="openRulesModal()" title="View Game Rules">📖 Rules</button>
+      </div>
       <h2 class="phase-title" id="phase-title">The city waits</h2>
       <div class="meta" id="timer-readout"></div>
     </header>
@@ -61,6 +64,26 @@
           <button class="btn btn-ghost" id="mute-btn" type="button">Mute</button>
           <button class="btn btn-ghost hidden" id="skip-btn" type="button">Skip to vote</button>
         </div>
+
+        <!-- Town Discussion & Text Chat Window -->
+        <div class="town-chat" id="town-chat">
+          <div class="town-chat-header">
+            <h3>💬 Town Discussion & Chat</h3>
+            <span class="town-chat-subtitle">Type to discuss if you can't speak</span>
+          </div>
+          <div class="town-messages" id="town-messages"></div>
+          <div class="quick-phrases">
+            <button type="button" class="quick-chip" data-text="I am Innocent!">👤 I am Innocent!</button>
+            <button type="button" class="quick-chip" data-text="Who do you suspect?">🔍 Who do you suspect?</button>
+            <button type="button" class="quick-chip" data-text="I suspect Mafia!">🕵️ I suspect Mafia!</button>
+            <button type="button" class="quick-chip" data-text="Vote together!">⚖️ Vote together!</button>
+          </div>
+          <div class="town-input-row">
+            <input id="town-input" type="text" maxlength="280" placeholder="Type your thoughts or clues here..."/>
+            <button type="button" id="town-send">Send</button>
+          </div>
+        </div>
+
         <div class="fallen hidden" id="fallen">
           <h3>The fallen</h3>
           <div class="player-grid" id="fallen-grid"></div>
@@ -91,9 +114,11 @@
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="/js/game-state.js"></script>
   <script src="/js/ui.js"></script>
+  <script src="/js/rules.js"></script>
   <script src="/js/card-flip.js"></script>
   <script src="/js/faction-chat.js"></script>
   <script src="/js/audio.js"></script>
+  <script src="/js/town-chat.js"></script>
   <script src="/js/socket-client.js"></script>
   <script>
     loadSession();
@@ -102,6 +127,7 @@
     const socket = connectSocket();
     attachCommonErrors(socket);
     bindFactionChat(socket);
+    initTownChat(socket);
 
     let muted = false;
     let myVote = null;
@@ -132,7 +158,16 @@
       return { living, dead };
     }
 
-    socket.on('connect', () => joinRoom(socket));
+    socket.on('connect', () => {
+      joinRoom(socket);
+      initTownChat(socket);
+    });
+
+    socket.on('peer:announce', ({ playerId, peerId }) => {
+      if (playerId !== GameState.playerId) {
+        connectToAllPeers([peerId || playerId]);
+      }
+    });
 
     socket.on('room:joined', (payload) => {
       GameState.playerId = payload.playerId;
@@ -238,7 +273,7 @@
       }
       document.getElementById('skip-btn').classList.toggle('hidden', !GameState.isHost);
       updateSpectator();
-      initAudio(GameState.uuid).then(() => {
+      initAudio(GameState.uuid, socket).then(() => {
         setAudioPhase(true);
         connectToAllPeers(peerIds);
       });

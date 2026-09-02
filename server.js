@@ -145,6 +145,7 @@ function createRoom(hostUuid, hostName, socketId) {
     nightActions: emptyNightActions(),
     dayVotes: {},
     factionChat: { mafia: [], doctor: [] },
+    townChat: [],
     timers: {},
     lastSaves: 0,
   };
@@ -406,6 +407,10 @@ function startDay(room, announcement, killedPlayer) {
     players: publicPlayers(room),
     peerIds: living(room).filter((p) => p.socketId).map((p) => p.uuid),
   });
+  if (announcement) {
+    emitRoom(room, 'town:chat:system', announcement);
+  }
+  emitRoom(room, 'town:chat:system', '☀️ Day discussion phase started! Share clues and debate suspects.');
   setPhaseTimer(room, 'discuss', DISCUSSION_SECONDS, () => startVote(room));
 }
 
@@ -418,6 +423,7 @@ function startVote(room) {
     timeLimit: VOTE_TIMER_SECONDS,
     players: publicPlayers(room),
   });
+  emitRoom(room, 'town:chat:system', '⚖️ Voting phase started! Cast your vote to eliminate a suspect.');
   setPhaseTimer(room, 'vote', VOTE_TIMER_SECONDS, () => resolveDayVote(room));
 }
 
@@ -444,6 +450,11 @@ function resolveDayVote(room) {
       }
     }
   }
+
+  const resultMsg = eliminated
+    ? `☠️ ${eliminated.name} was voted out this round!`
+    : '🤝 The vote was tied. No one was voted out.';
+  emitRoom(room, 'town:chat:system', resultMsg);
 
   emitRoom(room, 'vote:result', {
     eliminated,
@@ -737,6 +748,38 @@ io.on('connection', (socket) => {
     const msg = { playerId: player.uuid, name: player.name, text: msgText, ts: Date.now() };
     room.factionChat[side].push(msg);
     livingByRole(room, side).forEach((p) => emitToPlayer(p, 'faction:message', msg));
+  });
+
+  socket.on('town:chat:message', ({ text, isGhost }) => {
+    const room = getRoomBySocket(socket);
+    if (!room) return;
+    const player = playerBySocket(room, socket);
+    if (!player) return;
+    const msgText = String(text || '').trim().slice(0, 280);
+    if (!msgText) return;
+    const msg = {
+      playerId: player.uuid,
+      name: player.name,
+      text: msgText,
+      isGhost: !player.isAlive || Boolean(isGhost),
+      ts: Date.now(),
+    };
+    if (!room.townChat) room.townChat = [];
+    room.townChat.push(msg);
+    if (room.townChat.length > 100) room.townChat.shift();
+    emitRoom(room, 'town:chat:message', msg);
+  });
+
+  socket.on('peer:register', ({ peerId }) => {
+    const room = getRoomBySocket(socket);
+    if (!room) return;
+    const player = playerBySocket(room, socket);
+    if (!player || !peerId) return;
+    player.peerId = peerId;
+    emitRoom(room, 'peer:announce', {
+      playerId: player.uuid,
+      peerId: peerId,
+    });
   });
 
   socket.on('vote:cast', ({ targetId }) => {

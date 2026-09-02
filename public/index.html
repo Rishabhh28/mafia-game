@@ -33,14 +33,42 @@
       </div>
       <p class="error-banner" id="error"></p>
     </form>
+
+    <!-- Game Rules & How to Play Box below join form -->
+    <div class="rules-box" id="join-rules-box">
+      <div class="rules-box-header">
+        <h3><span class="rules-icon">📜</span> How to Play & Game Rules</h3>
+      </div>
+      <p class="rules-tagline">New to the city? Learn role abilities, game phases, and winning strategies.</p>
+      <div class="rules-roles-summary">
+        <div class="role-pill innocent" onclick="openRulesModal('roles')" title="Click for details">
+          <div class="role-pill-icon">👤</div>
+          <div class="role-pill-name">Innocent</div>
+        </div>
+        <div class="role-pill doctor" onclick="openRulesModal('roles')" title="Click for details">
+          <div class="role-pill-icon">🩺</div>
+          <div class="role-pill-name">Doctor</div>
+        </div>
+        <div class="role-pill mafia" onclick="openRulesModal('roles')" title="Click for details">
+          <div class="role-pill-icon">🕵️</div>
+          <div class="role-pill-name">Mafia</div>
+        </div>
+      </div>
+      <button type="button" class="rules-btn" onclick="openRulesModal()">
+        <span>📖</span> Read Full Rules & How to Play
+      </button>
+    </div>
   </main>
   <script src="/js/game-state.js"></script>
   <script src="/js/ui.js"></script>
+  <script src="/js/rules.js"></script>
   <script>
     loadSession();
     const params = new URLSearchParams(location.search);
     const preset = (params.get('code') || '').toUpperCase();
-    if (preset) document.getElementById('room-code').value = preset;
+    if (preset) {
+      document.getElementById('room-code').value = preset;
+    }
     if (GameState.name) document.getElementById('player-name').value = GameState.name;
 
     function goLobby(create) {

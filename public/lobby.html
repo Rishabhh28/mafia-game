@@ -21,12 +21,31 @@
     <div class="stack" style="width:min(480px,100%)">
       <button class="btn" id="ready-btn" type="button">Ready</button>
       <button class="btn btn-primary hidden" id="start-btn" type="button" disabled>Start Game</button>
+      <button type="button" class="rules-btn rules-btn-header" onclick="openRulesModal()" style="margin-top:0.25rem;">
+        <span>📖</span> How to Play & Rules
+      </button>
     </div>
+
+    <!-- Town Lobby Discussion Chat -->
+    <div class="town-chat" id="town-chat" style="width:min(480px,100%); margin-top:1.5rem;">
+      <div class="town-chat-header">
+        <h3>💬 Lobby Chat</h3>
+        <span class="town-chat-subtitle">Chat with players while waiting</span>
+      </div>
+      <div class="town-messages" id="town-messages" style="height:160px;"></div>
+      <div class="town-input-row">
+        <input id="town-input" type="text" maxlength="280" placeholder="Type a message to the lobby..."/>
+        <button type="button" id="town-send">Send</button>
+      </div>
+    </div>
+
     <p class="error-banner" id="error"></p>
   </main>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/game-state.js"></script>
   <script src="/js/ui.js"></script>
+  <script src="/js/rules.js"></script>
+  <script src="/js/town-chat.js"></script>
   <script src="/js/socket-client.js"></script>
   <script>
     loadSession();
@@ -49,6 +68,7 @@
     }
 
     socket.on('connect', () => {
+      initTownChat(socket);
       if (create && !GameState.code) {
         socket.emit('room:create', { playerName: GameState.name, uuid: GameState.uuid });
       } else {
