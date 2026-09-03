@@ -164,17 +164,34 @@ function emptyNightActions() {
 function assignRoles(room) {
   const n = room.players.length;
   const { mafia, doctor } = getRoleCount(n);
-  const roles = [
+  const baseRoles = [
     ...Array(mafia).fill('mafia'),
     ...Array(doctor).fill('doctor'),
     ...Array(n - mafia - doctor).fill('innocent'),
   ];
-  shuffle(roles).forEach((role, i) => {
+
+  let bestRoles = shuffle(baseRoles);
+  const hasPreviousRoles = room.players.some((p) => p.role !== null);
+  if (hasPreviousRoles) {
+    let minSameCount = Infinity;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const candidate = shuffle(baseRoles);
+      const sameCount = room.players.reduce((acc, p, idx) => acc + (p.role === candidate[idx] ? 1 : 0), 0);
+      if (sameCount < minSameCount) {
+        minSameCount = sameCount;
+        bestRoles = candidate;
+      }
+      if (minSameCount === 0) break;
+    }
+  }
+
+  bestRoles.forEach((role, i) => {
     room.players[i].role = role;
     room.players[i].isAlive = true;
     room.players[i].revealedRole = null;
   });
 }
+
 
 function factionNames(room, role, exceptUuid) {
   return room.players
@@ -439,7 +456,7 @@ function resolveDayVote(room) {
     if (player && player.isAlive) {
       player.isAlive = false;
       wasRole = player.role;
-      eliminated = { id: player.uuid, name: player.name };
+      eliminated = { id: player.uuid, name: player.name, role: player.role };
       if (player.role === 'mafia') {
         Object.entries(room.dayVotes).forEach(([voterId, targetId]) => {
           if (targetId === eliminatedId) {
@@ -451,17 +468,18 @@ function resolveDayVote(room) {
     }
   }
 
+  const roleEmoji = { mafia: '🔪 Mafia', doctor: '🩺 Doctor', innocent: '👁 Innocent' };
   const resultMsg = eliminated
-    ? `☠️ ${eliminated.name} was voted out this round!`
+    ? `☠️ ${eliminated.name} was voted out this round! Role: ${roleEmoji[wasRole] || wasRole}`
     : '🤝 The vote was tied. No one was voted out.';
   emitRoom(room, 'town:chat:system', resultMsg);
 
   emitRoom(room, 'vote:result', {
     eliminated,
-    wasRole: null,
+    wasRole,
     players: publicPlayers(room),
     announcement: eliminated
-      ? `${eliminated.name} is out this round. They return if the host continues.`
+      ? `${eliminated.name} was voted out this round (${roleEmoji[wasRole] || wasRole}). They return next round.`
       : 'The vote was tied. No one is out this round.',
   });
   emitRoom(room, 'score:update', { scores: scoresMap(room) });
@@ -477,10 +495,20 @@ function enterRoundBreak(room) {
   room.phase = 'round-break';
   clearTimers(room);
   emitRoom(room, 'audio:mute', {});
+  const mafiaList = room.players
+    .filter((p) => p.role === 'mafia')
+    .map((p) => ({ id: p.uuid, name: p.name }));
+  const roundRoles = room.players.map((p) => ({
+    id: p.uuid,
+    name: p.name,
+    role: p.role,
+  }));
   emitRoom(room, 'phase:round-break', {
     round: room.round,
     players: publicPlayers(room),
     scores: scoresMap(room),
+    mafiaList,
+    roundRoles,
   });
 }
 
@@ -808,7 +836,20 @@ io.on('connection', (socket) => {
     if (!room || room.phase !== 'round-break') return;
     const player = playerBySocket(room, socket);
     if (!player || player.uuid !== room.hostUuid) return;
-    startNight(room);
+
+    reviveAll(room);
+    assignRoles(room);
+    room.phase = 'role-reveal';
+    emitRoom(room, 'game:started', { playerCount: room.players.length });
+
+    room.players.forEach((p) => {
+      emitToPlayer(p, 'role:assigned', {
+        role: p.role,
+        factionMembers: p.role === 'innocent' ? [] : factionNames(room, p.role, p.uuid),
+      });
+    });
+
+    setPhaseTimer(room, 'reveal', 10, () => startNight(room));
   });
 
   socket.on('game:finish', () => {

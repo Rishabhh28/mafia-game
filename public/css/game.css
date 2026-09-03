@@ -171,3 +171,39 @@
   font-family: 'Cinzel', serif;
   letter-spacing: 0.08em;
 }
+
+@media (max-width: 640px) {
+  .game-header {
+    padding: 0.75rem 1rem;
+  }
+  .game-main {
+    padding: 1rem 0.65rem;
+  }
+  .announce {
+    font-size: 1.05rem;
+    margin-bottom: 1rem;
+  }
+  .player-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+  }
+  .target-grid {
+    gap: 0.5rem;
+  }
+  .target-chip {
+    padding: 0.65rem 0.9rem;
+    font-size: 12px;
+  }
+  .card-scene {
+    width: 190px;
+    height: 290px;
+  }
+}
+
+@media (max-width: 380px) {
+  .player-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem;
+  }
+}
+

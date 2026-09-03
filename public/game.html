@@ -30,7 +30,7 @@
           <div class="card">
             <div class="card-face card-back">
               <div class="card-ornament">✦</div>
-              <div class="card-back-title">MAFIA</div>
+              <div class="card-back-title">WHO ARE YOU?</div>
               <div class="card-ornament">✦</div>
             </div>
             <div class="card-face card-front" id="card-front"></div>
@@ -90,7 +90,12 @@
         </div>
       </section>
 
-      <section id="round-break-stage" class="hidden" style="text-align:center;max-width:520px">
+      <section id="round-break-stage" class="hidden" style="text-align:center;max-width:560px;width:100%">
+        <div id="round-recap-box" class="round-recap-box">
+          <h3 class="round-recap-title">Round Results & Roles Revealed</h3>
+          <div id="round-mafia-reveal" class="mafia-reveal-banner"></div>
+          <ul id="round-roles-list" class="round-roles-list"></ul>
+        </div>
         <p class="waiting-copy" id="round-break-copy">Waiting for the host to continue or end the game.</p>
         <div class="controls-row hidden" id="host-round-controls">
           <button class="btn btn-primary" id="next-round-btn" type="button">Next round</button>
@@ -309,7 +314,7 @@
       }
     });
 
-    socket.on('vote:result', ({ eliminated, players, announcement }) => {
+    socket.on('vote:result', ({ eliminated, wasRole, players, announcement }) => {
       applyPlayers(players);
       setAudioPhase(false);
       setText('announce', announcement || '');
@@ -317,10 +322,18 @@
       setText('phase-title', 'This round');
       document.getElementById('role-card').classList.add('hidden');
       const nameEl = document.getElementById('reveal-name');
-      if (nameEl) nameEl.textContent = eliminated ? eliminated.name + ' is out this round' : 'No one is out this round';
+      const roleEmoji = { mafia: '🔪 Mafia', doctor: '🩺 Doctor', innocent: '👁 Innocent' };
+      if (nameEl) {
+        if (eliminated) {
+          const roleStr = wasRole ? ` (${roleEmoji[wasRole] || wasRole})` : '';
+          nameEl.innerHTML = `<span style="color:var(--red-400);font-weight:bold">${escapeHtml(eliminated.name)}</span> was voted out!${roleStr}`;
+        } else {
+          nameEl.textContent = 'No one was voted out this round (Tied vote)';
+        }
+      }
     });
 
-    socket.on('phase:round-break', ({ round, players, scores }) => {
+    socket.on('phase:round-break', ({ round, players, scores, mafiaList, roundRoles }) => {
       GameState.phase = 'round-break';
       GameState.round = round;
       GameState.scores = scores || {};
@@ -330,10 +343,28 @@
       startTimerBar(0);
       showStage('round-break-stage');
       setText('phase-title', 'Round ' + round + ' complete');
-      setText('announce', 'Kills this round only change the score. Everyone can return.');
+      setText('announce', 'Round recap — Roles revealed!');
+
+      const mafiaEl = document.getElementById('round-mafia-reveal');
+      if (mafiaEl) {
+        const names = (mafiaList || []).map((m) => escapeHtml(m.name)).join(', ');
+        mafiaEl.innerHTML = `<span class="mafia-icon">🔪</span> <strong>Mafia in Round ${round}:</strong> ${names || 'None'}`;
+      }
+
+      const rolesListEl = document.getElementById('round-roles-list');
+      if (rolesListEl && roundRoles) {
+        const roleIcons = { mafia: '🔪 Mafia', doctor: '🩺 Doctor', innocent: '👁 Innocent' };
+        rolesListEl.innerHTML = roundRoles.map((r) => `
+          <li class="recap-role-item">
+            <span class="player-recap-name">${escapeHtml(r.name)}</span>
+            <span class="player-recap-role role-tag-${r.role}">${roleIcons[r.role] || r.role}</span>
+          </li>
+        `).join('');
+      }
+
       document.getElementById('host-round-controls').classList.toggle('hidden', !GameState.isHost);
       document.getElementById('round-break-copy').textContent = GameState.isHost
-        ? 'Continue with everyone back in, or finish and show the scoreboard.'
+        ? 'Continue with everyone getting new roles next round, or finish and show the scoreboard.'
         : 'Waiting for the host to continue or end the game.';
       updateSpectator();
       document.getElementById('spectator').classList.add('hidden');

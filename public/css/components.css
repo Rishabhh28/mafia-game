@@ -162,11 +162,196 @@ input[type="text"]:focus { border-color: var(--red-400); }
 
 .card-back-title {
   font-family: 'Cinzel', serif;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: 0.25em;
+  letter-spacing: 0.15em;
   color: var(--red-400);
+  text-align: center;
 }
+
+.town-input-row {
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.town-input-row input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 0.75rem 1rem;
+  color: var(--text-primary);
+  font-family: 'Crimson Pro', serif;
+  font-size: 16px;
+  outline: none;
+}
+
+.town-input-row button {
+  padding: 0.75rem 1.25rem;
+  background: var(--red-700);
+  border: none;
+  color: var(--text-primary);
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.town-input-row button:hover {
+  background: var(--red-600);
+}
+
+/* ==========================================================================
+   Round Recap & Mafia Reveal Styling
+   ========================================================================== */
+
+.round-recap-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-red);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-glow-red);
+  text-align: left;
+}
+
+.round-recap-title {
+  font-family: 'Cinzel', serif;
+  font-size: 16px;
+  color: var(--gold);
+  margin-bottom: 0.85rem;
+  text-align: center;
+  letter-spacing: 0.08em;
+}
+
+.mafia-reveal-banner {
+  background: rgba(139, 0, 0, 0.25);
+  border: 1px solid var(--border-red);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 15px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mafia-reveal-banner .mafia-icon {
+  font-size: 20px;
+}
+
+.round-roles-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+.recap-role-item {
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.player-recap-name {
+  font-family: 'Cinzel', serif;
+  color: var(--text-primary);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-recap-role {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.role-tag-mafia { color: var(--red-300); background: rgba(139, 0, 0, 0.3); border: 1px solid var(--border-red); }
+.role-tag-doctor { color: #7ad4d4; background: rgba(0, 128, 128, 0.2); border: 1px solid rgba(0, 128, 128, 0.4); }
+.role-tag-innocent { color: var(--text-secondary); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border); }
+
+/* Mobile responsiveness adjustments */
+@media (max-width: 640px) {
+  .player-card {
+    padding: 0.75rem 0.5rem;
+  }
+  .player-avatar {
+    width: 46px;
+    height: 46px;
+    font-size: 16px;
+    margin-bottom: 0.4rem;
+  }
+  .player-card .player-name {
+    font-size: 14px;
+    word-break: break-word;
+    line-height: 1.2;
+  }
+  .player-card .vote-btn {
+    width: 100%;
+    margin-top: 0.4rem;
+    padding: 0.45rem 0.5rem;
+    font-size: 11px;
+  }
+  .town-chat {
+    width: 100%;
+    margin-top: 1rem;
+    border-radius: 6px;
+  }
+  .town-chat-header {
+    padding: 0.6rem 0.85rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  .town-chat-header h3 {
+    font-size: 13px;
+  }
+  .town-chat-subtitle {
+    font-size: 11px;
+  }
+  .town-messages {
+    height: 180px;
+    padding: 0.65rem;
+    gap: 0.5rem;
+  }
+  .town-msg {
+    padding: 0.45rem 0.65rem;
+    font-size: 14px;
+  }
+  .quick-phrases {
+    padding: 0.4rem 0.5rem;
+    gap: 0.3rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  .quick-chip {
+    padding: 0.2rem 0.5rem;
+    font-size: 11px;
+  }
+  .town-input-row input {
+    padding: 0.6rem 0.75rem;
+    font-size: 15px;
+  }
+  .town-input-row button {
+    padding: 0.6rem 0.85rem;
+    font-size: 11px;
+  }
+  .round-roles-list {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 .card-ornament { color: var(--red-600); font-size: 20px; }
 
